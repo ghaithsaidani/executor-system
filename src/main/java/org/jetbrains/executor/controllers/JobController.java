@@ -6,7 +6,6 @@ import org.jetbrains.executor.enums.Executor;
 import org.jetbrains.executor.enums.JobStatus;
 import org.jetbrains.executor.models.Job;
 import org.jetbrains.executor.models.NecessaryResources;
-import org.jetbrains.executor.services.ExecutorService;
 import org.jetbrains.executor.services.JobService;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +19,6 @@ import java.util.List;
 @NullMarked
 public class JobController {
     private final JobService jobService;
-    private final ExecutorService kubernetesPodExecutorService;
 
     @GetMapping("")
     public ResponseEntity<List<Job>> getAllJobs(){
@@ -41,7 +39,7 @@ public class JobController {
                 .memoryLimit(jobDTO.necessaryResources().getMemoryLimit())
                 .build();
         Job job = new Job(jobDTO.command(), necessaryResources);
-        return ResponseEntity.ok(kubernetesPodExecutorService.execute(job, Executor.KUBERNETES));
+        return ResponseEntity.ok(jobService.execute(job, Executor.KUBERNETES));
     }
 
     @PostMapping("/container/execute")
@@ -51,6 +49,6 @@ public class JobController {
                 .memory(jobDTO.necessaryResources().getMemory())
                 .build();
         Job job = new Job(jobDTO.command(), necessaryResources);
-        return ResponseEntity.ok(kubernetesPodExecutorService.execute(job, Executor.DOCKER));
+        return ResponseEntity.ok(jobService.execute(job, Executor.DOCKER));
     }
 }
