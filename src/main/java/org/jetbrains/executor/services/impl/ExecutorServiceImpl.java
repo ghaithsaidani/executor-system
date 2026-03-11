@@ -37,13 +37,13 @@ public class ExecutorServiceImpl implements ExecutorService {
                     }
                 }
 
-                int exitCode = process.waitFor();
-                System.out.println("Command finished with exit code: " + exitCode);
-                job.setStatus(JobStatus.FINISHED);
+                if (executor == Executor.KUBERNETES) {
+                    deletePod("executor-" + job.getId());
+                }
             } catch (InterruptedException | IOException e) {
-                job.setStatus(JobStatus.FAILED);
                 throw new RuntimeException(e);
             } finally {
+                job.setStatus(JobStatus.FINISHED);
                 jobService.save(job);
             }
         });
@@ -52,18 +52,47 @@ public class ExecutorServiceImpl implements ExecutorService {
     }
 
     private static Process getPodProcess(Job job) throws IOException {
+
+        String overrides = """
+                {
+                  "spec": {
+                    "containers": [{
+                      "name": "executor-%s",
+                      "image": "alpine",
+                      "command": ["sh","-c","%s"],
+                      "resources": {
+                        "requests": {
+                          "cpu": "%s",
+                          "memory": "%s"
+                        },
+                        "limits": {
+                          "cpu": "%s",
+                          "memory": "%s"
+                        }
+                      }
+                    }]
+                  }
+                }
+                """.formatted(
+                job.getId(),
+                job.getCommand().replace("\"", "\\\""),
+                job.getNecessaryResources().getCpuRequest(),
+                job.getNecessaryResources().getMemoryRequest(),
+                job.getNecessaryResources().getCpuLimit(),
+                job.getNecessaryResources().getMemoryLimit()
+        );
+
         ProcessBuilder processBuilder = new ProcessBuilder(
                 "kubectl", "run", "executor-" + job.getId(),
-                "--image=nginx",
+                "--image=alpine",
                 "--restart=Never",
                 "--rm",
                 "--attach",
-                "--command",
-                "--",
-                "sh", "-c", job.getCommand()
+                "--overrides", overrides
         );
 
         processBuilder.redirectErrorStream(true);
+
         return processBuilder.start();
     }
 
@@ -73,12 +102,26 @@ public class ExecutorServiceImpl implements ExecutorService {
                 "--rm",
                 "-i",
                 "--name", "executor-" + job.getId(),
+                "--cpus=" + job.getNecessaryResources().getCpu(),
+                "--memory=" + job.getNecessaryResources().getMemory(),
                 "nginx",
                 "sh", "-c", job.getCommand()
         );
 
         processBuilder.redirectErrorStream(true);
         return processBuilder.start();
+    }
+
+    private static void deletePod(String podName) throws IOException, InterruptedException {
+
+        ProcessBuilder deleteBuilder = new ProcessBuilder(
+                "kubectl", "delete", "pod", podName
+        );
+
+        deleteBuilder.redirectErrorStream(true);
+
+        Process deleteProcess = deleteBuilder.start();
+        deleteProcess.waitFor();
     }
 
 }

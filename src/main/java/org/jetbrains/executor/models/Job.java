@@ -20,7 +20,7 @@ public class Job {
     public Job(String command, NecessaryResources necessaryResources){
         this.id = UUID.randomUUID().toString();
         this.command = command;
-        this.necessaryResources = necessaryResources;
+        this.necessaryResources=necessaryResources;
     }
 
 }
