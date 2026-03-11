@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Executor system is a Spring Boot application that provides a REST API for executing commands on both Kubernetes pods and Docker containers. It uses a three-tier architecture with asynchronous execution powered by Java 21 virtual threads. [1](#0-0)
+The Executor system is a Spring Boot application that provides a REST API for executing commands on both Kubernetes pods and Docker containers. It uses a three-tier architecture with asynchronous execution powered by Java 21 virtual threads.
 
 ## Architecture
 
